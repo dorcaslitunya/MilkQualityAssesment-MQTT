@@ -1,5 +1,5 @@
 <?php
-$response_topic = "KIRI/testresp";
+$response_topic = "milklistener/test";
 $do_respond = true;
 
 if ($message_php_arr = json_decode($message, true)) {

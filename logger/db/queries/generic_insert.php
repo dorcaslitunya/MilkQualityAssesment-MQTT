@@ -55,7 +55,7 @@ if (!$con) {
         } else {
             $generic_insert_resp['succ'] = 1;
             $generic_insert_resp['code'] = 1;
-            $generic_insert_resp['info'] = "rgst";
+            $generic_insert_resp['info'] = "added";
         }
     } catch (exception $e) {
         //code to handle the exception

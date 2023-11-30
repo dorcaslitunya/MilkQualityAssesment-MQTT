@@ -80,6 +80,9 @@ $mqtt->subscribe($subscribe_topic, function ($topic, $message) use ($mqtt) {
     case "milktester/sensor/turbidity":
       include __DIR__ . "/handler/handler_sensor_turbidity.php";
       break;
+    case "milktester/sensor/gas":
+      include __DIR__ . "/handler/handler_sensor_gas.php";
+      break;
 
     default:
       echo "no relevant action found. Dropping data. \n";

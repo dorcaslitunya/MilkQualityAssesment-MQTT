@@ -13,8 +13,7 @@ require('vendor/autoload.php');
 use \PhpMqtt\Client\MqttClient;
 use \PhpMqtt\Client\ConnectionSettings;
 
-// $server   = '139.162.254.51';  //maabara bunifu MQTT server
-$server = 'bme.kiriev.com'; //172.105.247.218
+$server   = '96.126.101.93';
 // $server   = 'localhost';
 $port = 18883;
 // $clientId = rand(5, 15);
@@ -23,8 +22,8 @@ $username = "";
 $password = "";
 $clean_session = true;
 
-$subscribe_topic = "KIRI/#";
-$publish_mach_topic = "KIRI/bcast";
+$subscribe_topic = "milktester/#";
+$publish_mach_topic = "milktester/bcast";
 
 function load_vars()
 {
@@ -51,7 +50,7 @@ $connectionSettings
   ->setUsername($username)
   ->setPassword(null)
   ->setKeepAliveInterval(60)
-  ->setLastWillTopic('KIRI/sys/lwt')
+  ->setLastWillTopic('milktester/sys/lwt')
   ->setLastWillMessage('client ' . $clientId . ' has disconnect')
   ->setLastWillQualityOfService(1);
 
@@ -62,168 +61,21 @@ printf("client connected\n");
 
 $mqtt->subscribe($subscribe_topic, function ($topic, $message) use ($mqtt) {
   echo "\n --------------------------------------- \n";
-  $response_topic = "KIRI/lost_messages";
+  $response_topic = "milktester/lost_messages";
   $do_respond = false;
-  $do_continue = true;
-  $intent = NULL;
 
   // printf("Received message on topic [%s]: %s\n", $topic, $message);
 
   // JSON decode the message
   switch ($topic) {
 
-    case "KIRI/mqtt/1": //Official
-    case "KIRI/test":
-    case "KIRI/test/2":
+    case "milktester/test":
       include __DIR__ . "/handler/handler_test.php";
       break;
 
-    case "KIRI/node/10":
-    case "KIRI/node/regist":
-      include __DIR__ . "/handler/handler_Register.php";
-      // echo "----- done, exiting -----";
+    case "milktester/sensor/temp":
+      include __DIR__ . "/handler/handler_sensor_temp.php";
       break;
-
-    case "KIRI/node/11":
-    case "KIRI/node/hbit":
-      include __DIR__ . "/handler/handler_HBit.php";
-      // echo "----- done, exiting -----";
-      break;
-
-    case "KIRI/mxn/pay":
-    case "KIRI/mxn/pay/20":
-      if ($message_php_arr = json_decode($message, true)) {
-        var_dump($message_php_arr);
-        $response_message_raw = array();
-
-        // extract IMEI
-        if (array_key_exists("imei", $message_php_arr)) {
-          $IMEI = $message_php_arr['imei'];
-        } else if (array_key_exists("IMEI", $message_php_arr)) {
-          $IMEI = $message_php_arr['IMEI'];
-        } else if (array_key_exists("im", $message_php_arr)) {
-          $IMEI = $message_php_arr['im'];
-        }
-
-        // check out relevant activity
-        if (array_key_exists("intent", $message_php_arr)) {
-          $intent = $message_php_arr['intent'];
-        } else if (array_key_exists("int", $message_php_arr)) {
-          $intent = $message_php_arr['int'];
-        } else if (array_key_exists("in", $message_php_arr)) {
-          $intent = $message_php_arr["in"];
-        }
-
-        if ($intent == "pay" || $intent == 20 || $topic == "KIRI/mxn/pay/20") { //20 -> request M-Pesa push. 
-          echo BR . "-------------------- payment handler ---------------------" . BR;
-
-          $response_topic = "KIRI/$IMEI/21";
-          $do_respond = true;
-
-          $response_message_raw = array();
-
-          $response_message_raw['ss'] = "x";
-          $response_message_raw['cd'] = "x";
-          // $response_message_raw['in'] = "";
-
-          $response_message = json_encode($response_message_raw);
-          // include '../daraja/wednesday.php';
-          // include $_SERVER['DOCUMENT_ROOT'] . '/daraja/tueseday.php';
-          // include '/var/www/html/simatechcloud.africa/public_html/malipo/tueseday.php'; -> sandbox
-          // include '/var/www/html/simatechcloud.africa/public_html/malipo/tueseday_live.php'; -> live
-          include '/var/www/html/simatechcloud.africa/public_html/malipo/malipo_push.php'; // -> live, grouped machines
-        }
-      } else {
-        // report why and if it is not a valid JSON.
-        echo "\n";
-        echo json_last_error_msg();
-        echo "\n";
-        echo $topic;
-      }
-      break;
-
-
-    case "KIRI/mxn/dsp":
-    case "KIRI/mxn/dsp/32":
-      if ($message_php_arr = json_decode($message, true)) {
-        var_dump($message_php_arr);
-
-        // extract IMEI
-        if (array_key_exists("imei", $message_php_arr)) {
-          $IMEI = $message_php_arr['imei'];
-        } else if (array_key_exists("IMEI", $message_php_arr)) {
-          $IMEI = $message_php_arr['IMEI'];
-        } else if (array_key_exists("im", $message_php_arr)) {
-          $IMEI = $message_php_arr['im'];
-        }
-
-        // check out relevant activity
-        if (array_key_exists("intent", $message_php_arr)) {
-          $intent = $message_php_arr['intent'];
-        } else if (array_key_exists("int", $message_php_arr)) {
-          $intent = $message_php_arr['int'];
-        } else if (array_key_exists("in", $message_php_arr)) {
-          $intent = $message_php_arr["in"];
-        } else $intent == "dsp"; //TODO clarify if this is being sent from the units.
-
-        if ($intent == "dsp" || $intent == 32) { //32 -> dispensation confirmation
-          echo BR . "-------------------- dispensation handler ---------------------" . BR;
-          include "listener/listen_to_confirm_disp.php";
-
-          // $response_message = json_encode($response_message_raw);
-          // $response_message = $response_disp;
-          // include "listener/mqttsys_mxn_dsp.php";
-        }
-      } else {
-        // report why and if it is not a valid JSON.
-        echo "\n";
-        echo json_last_error_msg();
-        echo "\n";
-        // echo $topic;
-      }
-      break;
-
-    case "KIRI/mxn/alarm/50":
-      if ($message_php_arr = json_decode($message, true)) {
-        include "listener/listen_to_alarms.php";
-      } else {
-        // report why and if it is not a valid JSON.
-        echo "\n";
-        echo json_last_error_msg();
-        echo "\n";
-        echo $topic;
-      }
-      break;
-
-
-      // Card management 
-    case "KIRI/mxn/crd":
-    case "KIRI/mxn/card":
-    case "KIRI/mxn/cd":
-    case "KIRI/usr/cd":
-    case "KIRI/usr/crd":
-    case "KIRI/usr/card":
-      if ($message_php_arr = json_decode($message, true)) {
-        var_dump($message_php_arr);
-
-        // if ($intent == "dsp" || $intent == 32) { //32 -> dispensation confirmation
-        echo BR . "-------------------- card handler ---------------------" . BR;
-        include "listener/listen_to_card_edit.php";
-
-        // $response_message = json_encode($response_message_raw);
-        // $response_message = $response_disp;
-        // include "listener/mqttsys_mxn_dsp.php";
-        // }
-      } else {
-        // report why and if it is not a valid JSON.
-        echo "\n";
-        echo json_last_error_msg();
-        echo "\n";
-        // echo $topic;
-      }
-      break;
-
-      // Close card management. 
 
 
     default:
@@ -237,15 +89,10 @@ $mqtt->subscribe($subscribe_topic, function ($topic, $message) use ($mqtt) {
     echo BR . "------ publishing to $response_topic ------";
     echo BR . $response_message;
     $mqtt->publish(
-      // topic
-      $response_topic,
-      // payload
-      // json_encode($payload),
-      $response_message,
-      // qos
-      1,
-      // retain
-      false
+      $response_topic, // topic     
+      $response_message, //payload //json_encode($payload)      
+      1, // qos      
+      false // retain
     );
     $do_respond = false;
     echo BR . "--------------- published ---------------";
